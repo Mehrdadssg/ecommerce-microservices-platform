@@ -35,14 +35,23 @@ app.use('/api', productRoutes);
 
 // error handling middleware  
 app.use((error, req, res, next) => {
+  console.error('Error handler called:', error.message);
+  
+  // Don't print "debug" - send proper error response
   const status = error.statusCode || 500;
   const message = error.message || 'Internal server error';
   
-  res.status(status).json({
-    success: false,
-    message,
-    ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-  });
+  // Make sure we always send JSON response
+  if (!res.headersSent) {
+    res.status(status).json({
+      success: false,
+      message,
+      ...(config.nodeEnv === 'development' && { 
+        stack: error.stack,
+        details: error 
+      })
+    });
+  }
 });
 
 export default app;
