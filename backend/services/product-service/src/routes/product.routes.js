@@ -1,20 +1,22 @@
 import express from 'express';
 import { ProductController } from '../controllers/product.controller.js';
 import { ProductService } from '../services/product.service.js';
-import { ProductRepository } from '../repositories/product.repository.js';
-import { validate } from '../middleware/validation.middleware.js';
+import { ProductRepositoryMongo } from '../repositories/product.repository.mongo.js';
+import {  validateBody, validateQuery, validateParams } from '../middleware/validation.middleware.js';
 import { createProductSchema, queryProductSchema,updateProductSchema,idParamSchema } from '../validations/product.validation.js';
 
 const router = express.Router();
 
-const database = {products:[]}
+// Initialize dependencies
+const repository = new ProductRepositoryMongo();
+const service = new ProductService({ repository });
+const controller = new ProductController({ productService: service });
 
-const productRepository = new ProductRepository({ database });
-const productService = new ProductService({ repository: productRepository });
-const productController = new ProductController({ productService });
+// Routes with proper validation
+router.get('/', validateQuery(queryProductSchema), controller.getAllProducts);
+router.get('/:id', controller.getProductById);  // We'll validate ID inside controller for now
+router.post('/', validateBody(createProductSchema), controller.createProduct);
+router.patch('/:id', validateBody(updateProductSchema), controller.updateProduct);
+router.delete('/:id', controller.deleteProduct);
 
-router.get('/products', validate(queryProductSchema),productController.getAllProducts);
-router.get('/products/:id', validate(idParamSchema),productController.getProductById);
-router.post('/products',validate(createProductSchema) ,productController.createProduct);
-router.patch('/:id', validate(idParamSchema), validate(updateProductSchema), productController.updateProduct);
 export default router;

@@ -1,32 +1,23 @@
-\# E-Commerce Platform
+# E-Commerce Microservices Platform
 
+A modern, scalable e-commerce platform built with microservices architecture, following industry best practices.
 
+## Architecture
 
-A modern, scalable e-commerce platform built with microservices architecture.
+- **Microservices-based** backend
+- **Event-driven** communication
+- **RESTful APIs** with Express.js
+- **Test-Driven Development** (TDD)
+- **Docker-ready** infrastructure
 
+## Tech Stack
 
+- **Runtime:** Node.js (ES6+)
+- **Framework:** Express.js
+- **Testing:** Jest, Supertest
+- **Validation:** Zod
+- **Database:** MongoDB (coming soon)
+- **Container:** Docker & Kubernetes (coming soon)
+- **CI/CD:** GitHub Actions (coming soon)
 
-\## Architecture
-
-\- Microservices-based backend
-
-\- Event-driven communication
-
-\- Container-native development
-
-\- API-first design
-
-
-
-\## Tech Stack
-
-\- Frontend: React + Next.js
-
-\- Backend: Node.js microservices
-
-\- Database: PostgreSQL, Redis, MongoDB
-
-\- Infrastructure: Docker, Kubernetes
-
-\- CI/CD: GitHub Actions
-
+##  Project Structure

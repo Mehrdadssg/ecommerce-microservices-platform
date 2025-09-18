@@ -1,19 +1,90 @@
-
-export const validate =(schema) => (req, res, next) => {
+export const validate = (schema) => {
+  return async (req, res, next) => {
+    console.log('Validation middleware called');
+    console.log('Request body:', req.body);
     
-   return schema.parseAsync({
-        body: req.body,
-        query: req.query,
-        params: req.params
-    }).then(() => {
-        next();
-    }).catch((err) => {
-        if (err.errors) {
-            return res.status(400).json({
-                success: false,
-                message: 'Validation error',
-                errors: err.errors.map(e => e.message)
-            });
-        }
-        next(err);
-    });}
+    try {
+      // Validate the request body directly
+      const validated = await schema.parseAsync(req.body);
+      
+    
+      req.body = validated;
+      
+      console.log('Validation passed, transformed body:', req.body);
+      next();
+    } catch (error) {
+      console.error('Validation failed:', error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            field: err.path.join('.'),
+            message: err.message
+          }))
+        });
+      }
+      
+      return res.status(400).json({
+        success: false,
+        message: error.message || 'Validation error'
+      });
+    }
+  };
+};
+
+// Separate validators for different parts of the request
+export const validateBody = (schema) => {
+  return async (req, res, next) => {
+    try {
+      req.body = await schema.parseAsync(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Validation failed',
+          errors: error.errors
+        });
+      }
+      next(error);
+    }
+  };
+};
+
+export const validateQuery = (schema) => {
+  return async (req, res, next) => {
+    try {
+      req.query = await schema.parseAsync(req.query);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid query parameters',
+          errors: error.errors
+        });
+      }
+      next(error);
+    }
+  };
+};
+
+export const validateParams = (schema) => {
+  return async (req, res, next) => {
+    try {
+      req.params = await schema.parseAsync(req.params);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid parameters',
+          errors: error.errors
+        });
+      }
+      next(error);
+    }
+  };
+};
