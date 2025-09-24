@@ -10,7 +10,11 @@ const app = express();
 
 app.use(express.json());
 app.use(helmet());
-app.use(morgan(config.logLevel));
+
+if (config.nodeEnv !== 'test') {
+    app.use(morgan('dev'));  
+}
+
 app.use(compression());
 app.use(express.urlencoded({ extended: true }))
 
@@ -22,22 +26,22 @@ app.get('/health', (_, res) => {
 })
 
 //API Routes
-app.use('/api', productRoutes);
+app.use('/api/products', productRoutes);
 
 
 
 // Add 404 handler for unknown routes
-// app.use('*', (req, res) => {
-//   res.status(404).json({ message: 'Not Found' });
-// });
-
-
+app.use((req, res, next) => {
+  console.log('404 - Route not found:', req.originalUrl);
+  res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.originalUrl}`
+  });
+});
 
 // error handling middleware  
 app.use((error, req, res, next) => {
   console.error('Error handler called:', error.message);
-  
-  // Don't print "debug" - send proper error response
   const status = error.statusCode || 500;
   const message = error.message || 'Internal server error';
   

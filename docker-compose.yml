@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+
+  product-service:
+    build: ./backend/services/product-service
+    container_name: product-service
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/product-db?authSource=admin
+      - JWT_SECRET=shared-secret
+    depends_on:
+      - mongodb
+
+  user-service:
+    build: ./backend/services/user-service
+    container_name: user-service
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - MONGODB_URI=mongodb://admin:admin123@mongodb:27017/user-db?authSource=admin
+      - JWT_SECRET=shared-secret
+    depends_on:
+      - mongodb
+
+  api-gateway:
+    build: ./backend/services/api-gateway
+    container_name: api-gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - AUTH_SERVICE_URL=http://user-service:3002
+      - PRODUCT_SERVICE_URL=http://product-service:3000
+    depends_on:
+      - product-service
+      - user-service
+
+volumes:
+  mongodb_data:

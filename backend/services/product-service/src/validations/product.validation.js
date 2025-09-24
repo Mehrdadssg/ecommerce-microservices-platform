@@ -22,14 +22,13 @@ export const updateProductSchema = z.object({
 
 // For query parameters
 export const queryProductSchema = z.object({
-  page: z.string().regex(/^\d+$/).transform(Number).optional(),
-  limit: z.string().regex(/^\d+$/).transform(Number).optional(),
-  sortBy: z.enum(['name', 'price', 'createdAt']).optional(),
+  page: z.string().optional(),
+  limit: z.string().optional(),
+  sortBy: z.string().optional(),
   order: z.enum(['asc', 'desc']).optional(),
   category: z.string().optional(),
-  minPrice: z.string().regex(/^\d+$/).transform(Number).optional(),
-  maxPrice: z.string().regex(/^\d+$/).transform(Number).optional()
-});
-
+  minPrice: z.string().optional(),
+  maxPrice: z.string().optional()
+}).passthrough(); 
 // For ID parameter
 export const idParamSchema = z.string().length(24, 'Invalid MongoDB ObjectId'); 

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export const validate = (schema) => {
   return async (req, res, next) => {
     console.log('Validation middleware called');
@@ -38,7 +40,8 @@ export const validate = (schema) => {
 export const validateBody = (schema) => {
   return async (req, res, next) => {
     try {
-      req.body = await schema.parseAsync(req.body);
+      const validatedBody = await schema.parseAsync(req.body);
+      req.body = validatedBody;  
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -56,7 +59,10 @@ export const validateBody = (schema) => {
 export const validateQuery = (schema) => {
   return async (req, res, next) => {
     try {
-      req.query = await schema.parseAsync(req.query);
+      const validatedQuery = await schema.parseAsync(req.query);
+      
+      req.validatedQuery = validatedQuery;
+      
       next();
     } catch (error) {
       if (error instanceof z.ZodError) {

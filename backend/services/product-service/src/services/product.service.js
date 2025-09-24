@@ -13,48 +13,45 @@ export class ProductService {
     this.#validators = validators;
   }
 
-  getAllProducts = async ({ 
-    page = 1, 
-    limit = 20, 
-    sortBy = 'createdAt', 
-    order = 'desc',
-    filters = {} 
-  } = {}) => {
+  getAllProducts = async ({ page = 1, limit = 20, sortBy = 'createdAt', order = 'desc', filters = {} } = {}) => {
     try {
-  
+      // Check cache first
       const cacheKey = `products:${JSON.stringify({ page, limit, sortBy, order, filters })}`;
       
       if (this.#cache) {
-        const cached = await this.#cache.get(cacheKey);
+        const cached = await this.#cache?.get(cacheKey);
         if (cached) return cached;
       }
 
-      // Modern destructuring with default values
-      const { category, minPrice, maxPrice, search } = filters;
-      
-      // Build query with optional chaining and nullish coalescing
-      const query = {
-        ...(category && { category }),
-        ...(minPrice !== undefined && { price: { $gte: minPrice } }),
-        ...(maxPrice !== undefined && { price: { ...query?.price, $lte: maxPrice } }),
-        ...(search && { $text: { $search: search } })
-      };
-
-      const products = await this.#repository.findAll({
-        query,
+      const result = await this.#repository.findAll({
+        query: filters,
         pagination: { page, limit },
-        sort: { [sortBy]: order }
+        sort: { [sortBy]: order === 'desc' ? -1 : 1 }
       });
 
-      const transformed = products.map(this.#transformProduct);
+      // Transform products if result has data property
+      const products = result.data || result;
+      const transformed = Array.isArray(products) 
+        ? products.map(p => this.#transformProduct(p))
+        : products;
+
+      const response = {
+        data: transformed,
+        pagination: result.pagination || {
+          page,
+          limit,
+          total: Array.isArray(transformed) ? transformed.length : 0,
+          pages: 1
+        }
+      };
 
       // Cache the results
-      await this.#cache?.set(cacheKey, transformed, 300); // 5 min TTL
+      await this.#cache?.set(cacheKey, response, 300);
 
-      return transformed;
+      return response;
     } catch (error) {
-      // Modern error handling with cause (ES2022)
-      throw new Error('Failed to fetch products', { cause: error });
+      console.error('Service getAllProducts error:', error);
+      throw new Error(`Failed to fetch products: ${error.message}`, { cause: error });
     }
   };
 
@@ -99,29 +96,36 @@ export class ProductService {
     return transformed;
   };
 
-  createProduct = async (productData) => {
-    const validated = await this.#validators.product?.parseAsync(productData);
-    
-    const data = validated ?? productData;
-    
-    const enrichedData = {
-      ...data,
-      slug: this.#generateSlug(data.name),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: 1
-    };
+   createProduct = async (productData) => {
+    try {
+      const validated = this.#validators?.product?.parseAsync 
+        ? await this.#validators.product.parseAsync(productData)
+        : productData;
+      
+      const enrichedData = {
+        ...validated,
+        slug: this.#generateSlug(validated.name),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
 
-    const created = await this.#repository.create(enrichedData);
-    
-    // Invalidate cache
-    await this.#cache?.delete('products:*');
-    
-    // Event-driven architecture (emit event for other services)
-    await this.#emitEvent('product.created', created);
-    
-    return this.#transformProduct(created);
+      const created = await this.#repository.create(enrichedData);
+      
+      // Clear cache
+      await this.#cache?.delete('products:*');
+      
+      // Emit event
+      await this.#emitEvent('product.created', created);
+      
+      // Return transformed product (convert to plain object if Mongoose)
+      const plainProduct = created.toObject ? created.toObject() : created;
+      return this.#transformProduct(plainProduct);
+    } catch (error) {
+      console.error('Service createProduct error:', error);
+      throw new Error(`Failed to create product: ${error.message}`, { cause: error });
+    }
   };
+
 
   updateProduct = async (id, updateData) => {
     const existing = await this.getProductById(id);
