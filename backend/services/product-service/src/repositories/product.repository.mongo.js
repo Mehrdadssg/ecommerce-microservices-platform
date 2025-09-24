@@ -1,33 +1,19 @@
 import { Product } from '../models/product.model.js';
 
 export class ProductRepositoryMongo {
-  async findAll({ query = {}, pagination = { page: 1, limit: 20 }, sort = { createdAt: 'desc' } }) {
+ async findAll({ query = {}, pagination = { page: 1, limit: 20 }, sort = { createdAt: -1 } } = {}) {
     try {
       const { page, limit } = pagination;
       const skip = (page - 1) * limit;
       
-      // Build MongoDB query
-      const mongoQuery = { ...query };
-      
-      // Handle special filters
-      if (query.minPrice || query.maxPrice) {
-        mongoQuery.price = {};
-        if (query.minPrice) mongoQuery.price.$gte = query.minPrice;
-        if (query.maxPrice) mongoQuery.price.$lte = query.maxPrice;
-        delete mongoQuery.minPrice;
-        delete mongoQuery.maxPrice;
-      }
-      
-      // Execute query with pagination
       const products = await Product
-        .find(mongoQuery)
+        .find(query)
         .sort(sort)
         .skip(skip)
         .limit(limit)
-        .lean();  // Returns plain JS objects for better performance
+        .lean();  // .lean() returns plain objects, not Mongoose documents
       
-      // Get total count for pagination
-      const total = await Product.countDocuments(mongoQuery);
+      const total = await Product.countDocuments(query);
       
       return {
         data: products,
@@ -39,7 +25,8 @@ export class ProductRepositoryMongo {
         }
       };
     } catch (error) {
-      throw new Error(`Database query failed: ${error.message}`);
+      console.error('Repository findAll error:', error);
+      throw error;
     }
   }
   

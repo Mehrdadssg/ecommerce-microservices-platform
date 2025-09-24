@@ -1,4 +1,4 @@
-import { ProductService } from "../services/product.service.js";
+
 
 export class ProductController {
 
@@ -12,22 +12,40 @@ export class ProductController {
 
 
 getAllProducts = async (req, res, next) => {
-
-        const page = req.query.page || 1;
-        const limit = req.query.limit || 20;
-        const sortBy = req.query.sortBy || 'createdAt';
-        const order = req.query.order || 'desc';
-        // Extract filters excluding pagination and sorting params
-        const { page: _, limit: __, sortBy: ___, order: ____, ...filters } = req.query;
-    try{
-        const product = await this.productService.getAllProducts({ page, limit, sortBy, order, filters });
-        res.status(200).json(product);  
-    }
-    catch(err){
-        next(err);
-    }
-
-}
+  try {
+    // Use validated query if available, otherwise use original
+    const query = req.validatedQuery || req.query;
+    
+    const page = parseInt(query.page) || 1;
+    const limit = parseInt(query.limit) || 20;
+    const sortBy = query.sortBy || 'createdAt';
+    const order = query.order || 'desc';
+    
+    // Extract filters (remove pagination and sort params)
+    const { page: _, limit: __, sortBy: ___, order: ____, ...filters } = query;
+    
+    const result = await this.productService.getAllProducts({
+      page,
+      limit,
+      sortBy,
+      order,
+      filters
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: result.data || result,
+      pagination: result.pagination || {
+        page,
+        limit,
+        total: Array.isArray(result) ? result.length : result.data?.length || 0
+      }
+    });
+  } catch (error) {
+    console.error('Error in getAllProducts:', error);
+    next(error);
+  }
+};
 
 
 
